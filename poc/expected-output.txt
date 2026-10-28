@@ -1,0 +1,34 @@
+Joined:    /tmp/triton_poc/models/foo/../foo_admin_secret/keys.txt
+Child can: /tmp/triton_poc/models/foo_admin_secret/keys.txt
+Parent can:/tmp/triton_poc/models/foo
+is_escaped (should be TRUE to block): FALSE=BYPASS
+
+Leaked content: SECRET_ADMIN_MATERIAL
+
+=== Triton path-confusion full-chain PoC ===
+
+Scenario: multi-tenant Triton, attacker owns model 'foo',
+target is sibling model dir 'foo_admin'.
+
+[model.cc:117] label_path = tenv/models/foo/../foo_admin/api_keys.txt
+[model.cc:118] IsChildPathEscapingParentPath returned: false (ALLOWED)
+
+[infer_response.cc:217] Simulated inference response:
+  class 0 label = "prod_AKIA_EXAMPLE_SECRET_LINE_0"
+  class 1 label = "staging_AKIA_EXAMPLE_SECRET_LINE_1"
+  class 2 label = "internal_oauth_client_secret_LINE_2"
+
+LEAK confirmed. Attacker receives 3 lines of sibling model's file via inference classification response.
+
+parent: /tmp/triton_child_path_diff/models/foo
+
+case                                           r26.05    72f3d9b   expected
+label inside model dir                         allowed   allowed   allowed
+file in version subdirectory                   allowed   allowed   allowed
+child equals parent                            allowed   allowed   allowed
+sibling sharing the name prefix (foo_admin)    allowed   escaped   escaped   <- r26.05 wrong
+sibling with unrelated name (bar)              escaped   escaped   escaped
+parent of the model dir                        escaped   escaped   escaped
+two levels up                                  escaped   escaped   escaped
+
+mismatches r26.05: 1, mismatches 72f3d9b: 0
